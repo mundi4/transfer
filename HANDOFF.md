@@ -23,29 +23,32 @@ base64 를 잘게 자른 "파트" 로 나눠 paste.
 - `fonts/noto-serif-kr-v31-korean_latin-regular.woff2`
 - `fonts/noto-serif-kr-v31-korean_latin-700.woff2`
 
-woff2 는 brotli 로 이미 압축됨 → 추가 LZMA 압축률 ~0%.
+woff2 는 brotli 로 이미 압축됨 → 추가 압축 효과 없음 → 컨테이너는 단순 묶음용
+(zip `-0` store 모드).
 
 ## 파이프라인
 
 Sans / Serif 는 **각각 별도 묶음**. 한 묶음으로 합치지 말 것.
 
 ```
-sans woff2 × 2  →  tar c  →  xz -9e  →  base64  →  2000-line/64-char chunks  →  fonts-sans.tar.xz parts
-serif woff2 × 2 →  tar c  →  xz -9e  →  base64  →  2000-line/64-char chunks  →  fonts-serif.tar.xz parts
+sans woff2 × 2  →  zip -0 (store)  →  base64  →  2000-line/64-char chunks  →  fonts-sans.zip parts
+serif woff2 × 2 →  zip -0 (store)  →  base64  →  2000-line/64-char chunks  →  fonts-serif.zip parts
 ```
 
 빌드 스크립트 `build.mjs` 가:
 
-1. 각 그룹별 `tar` → `xz -9e` (mtime/owner 고정 → 결정론적 산출물)
+1. 각 그룹별 `zip -0 -X -D` (압축 없음 + extra field 제거 + dir 엔트리 없음)
 2. base64 인코딩
 3. 줄당 64자 줄바꿈, 2000줄(=128,000자) 씩 1 파트
 4. 각 파트에 BEGIN/END 마커 부착
 5. 양쪽 그룹의 파트 배열을 `index.html` 에 인라인 JS const 로 emit
 
+zip 선택 이유: Windows 기본 더블클릭 풀림. 운영 PC 에서 추가 도구 불필요.
+
 현재 빌드 결과:
 
-- `fonts-sans.tar.xz`: 1.05 MB → 12 파트
-- `fonts-serif.tar.xz`: 1.91 MB → 21 파트
+- `fonts-sans.zip`: 1.05 MB → 12 파트
+- `fonts-serif.zip`: 1.91 MB → 21 파트
 - 합계 33 파트
 
 ## 마커 포맷
@@ -59,8 +62,8 @@ serif woff2 × 2 →  tar c  →  xz -9e  →  base64  →  2000-line/64-char ch
 ----- N/TOTAL END <kind> -----
 ```
 
-`<kind>` ∈ { `fonts-sans.tar.xz`, `fonts-serif.tar.xz` }.
-같은 kind 끼리만 모아 BEGIN/END 사이 base64 라인을 concat → decode → tar.xz.
+`<kind>` ∈ { `fonts-sans.zip`, `fonts-serif.zip` }.
+같은 kind 끼리만 모아 BEGIN/END 사이 base64 라인을 concat → decode → .zip.
 
 각 클립보드 엔트리 = 1 파트 = BEGIN 라인 + ≤2000줄 base64 + END 라인 (≈ 128 KB
 텍스트, 마지막 파트는 더 작을 수 있음).
@@ -144,7 +147,7 @@ GitHub Pages 로:
 - 양 그룹의 BEGIN/END 마커가 올바른 형식으로 들어 있음
 - 모든 파트 번호 1..N 이 빠짐없이 존재
 - base64 concat → decode → 빌드시 archive sha256 와 일치
-- xz -d → tar xf → 추출된 woff2 4개 sha256 = `fonts/` 원본과 일치
+- unzip → 추출된 woff2 4개 sha256 = `fonts/` 원본과 일치
 
 이번 빌드 결과: **PASS**.
 

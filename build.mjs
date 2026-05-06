@@ -15,7 +15,7 @@ const LINES_PER_PART = 2000;
 const GROUPS = [
   {
     label: 'Sans',
-    kind: 'fonts-sans.tar.xz',
+    kind: 'fonts-sans.zip',
     files: [
       'noto-sans-kr-v39-korean_latin-regular.woff2',
       'noto-sans-kr-v39-korean_latin-700.woff2',
@@ -23,7 +23,7 @@ const GROUPS = [
   },
   {
     label: 'Serif',
-    kind: 'fonts-serif.tar.xz',
+    kind: 'fonts-serif.zip',
     files: [
       'noto-serif-kr-v31-korean_latin-regular.woff2',
       'noto-serif-kr-v31-korean_latin-700.woff2',
@@ -33,11 +33,13 @@ const GROUPS = [
 
 function buildArchive(files) {
   const dir = mkdtempSync(join(tmpdir(), 'transfer-'));
-  const out = join(dir, 'a.tar.xz');
+  const out = join(dir, 'a.zip');
   const list = files.map(f => `'${f}'`).join(' ');
-  // Deterministic tar (fixed mtime/owner) → reproducible archive across rebuilds.
+  // -0 store mode (woff2 is already brotli-compressed, deflate gains nothing).
+  // -X strip extra fields, -D no dir entries → smaller, more reproducible.
+  // Run from FONTS_DIR so paths inside the zip are just the basenames.
   execSync(
-    `tar -C '${FONTS_DIR}' --owner=0 --group=0 --numeric-owner --sort=name --mtime='1970-01-01 00:00:00 UTC' -cf - ${list} | xz -9e -c > '${out}'`,
+    `cd '${FONTS_DIR}' && zip -q -0 -X -D '${out}' ${list}`,
     { stdio: ['ignore', 'inherit', 'inherit'] },
   );
   const buf = readFileSync(out);

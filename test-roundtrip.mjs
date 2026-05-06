@@ -78,14 +78,12 @@ for (const g of GROUPS) {
     console.error(`  archive sha256 mismatch!`);
     allOk = false;
   }
-  // Write out, decompress, untar.
+  // Write out, unzip.
   const groupDir = join(tmp, g.kind);
   execSync(`mkdir -p '${groupDir}'`);
   const arcPath = join(groupDir, g.kind);
   execSync(`cat > '${arcPath}'`, { input: archive });
-  execSync(`xz -d '${arcPath}'`);
-  const tarPath = arcPath.replace(/\.xz$/, '');
-  execSync(`tar -C '${groupDir}' -xf '${tarPath}'`);
+  execSync(`unzip -q -o '${arcPath}' -d '${groupDir}'`);
   // sha256 every extracted woff2 against originals.
   for (const f of readdirSync(groupDir)) {
     if (!f.endsWith('.woff2')) continue;

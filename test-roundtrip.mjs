@@ -23,7 +23,7 @@ for (const [f, h] of Object.entries(originals)) console.log(`  ${h}  ${f}`);
 // 2. Pull the GROUPS data straight out of index.html.
 //    Extract the JSON-ish literal between `const GROUPS = ` and `;\nconst state`.
 const html = readFileSync('index.html', 'utf-8');
-const m = html.match(/const GROUPS = (\[[\s\S]*?\]);\nconst state =/);
+const m = html.match(/const GROUPS = (\[[\s\S]*?\]);\nconst done =/);
 if (!m) { console.error('cannot locate GROUPS in index.html'); process.exit(1); }
 // The data is JSON with < escaping for `<`. JSON.parse handles \u escapes.
 const GROUPS = JSON.parse(m[1]);
